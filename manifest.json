@@ -1,0 +1,26 @@
+{
+    "name": "rodama-rewards PWA",
+    "short_name": "rodama-rewards",
+    "description": "rodama-rewards Progressive Web App",
+    "start_url": "/rodama-rewards/",
+    "scope": "/rodama-rewards/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "icons": [
+        {
+            "src": "/rodama-rewards/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/rodama-rewards/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "orientation": "portrait",
+    "prefer_related_applications": false
+}
