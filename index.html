@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>rodama-rewards PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/rodama-rewards/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/rodama-rewards/icon-512x512.png">
+    <link rel="apple-touch-icon" href="/rodama-rewards/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="rodama-rewards PWA">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="rodama-rewards Progressive Web App">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000000;
+        }
+        iframe {
+            width: 100lvw;
+            height: 100lvh;
+            border: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        @supports(padding: max(0px)) {
+            body, iframe {
+                padding-top: env(safe-area-inset-top);
+                height: calc(100lvh - env(safe-area-inset-top));
+            }
+        }
+    </style>
+</head>
+<body>
+    <iframe id="framerContent" src="https://rodamaapp.framer.website" allowfullscreen allow="geolocation; camera; microphone; storage-access"></iframe>
+    <script>
+    function sendMessageToIframe(message) {
+        const iframe = document.getElementById('framerContent');
+        iframe.contentWindow.postMessage(message, 'https://rodamaapp.framer.website');
+    }
+    
+    window.addEventListener('message', function(event) {
+        if (event.origin !== "https://rodamaapp.framer.website") return;
+        
+        if (event.data.type === 'setSessionData') {
+            localStorage.setItem('sessionData', JSON.stringify(event.data.sessionData));
+        } else if (event.data.type === 'getSessionData') {
+            const sessionData = localStorage.getItem('sessionData');
+            sendMessageToIframe({
+                type: 'sessionDataResponse',
+                sessionData: sessionData ? JSON.parse(sessionData) : null
+            });
+        }
+    }, false);
+
+    window.addEventListener('load', function() {
+        const sessionData = localStorage.getItem('sessionData');
+        if (sessionData) {
+            sendMessageToIframe({
+                type: 'restoreSession',
+                sessionData: JSON.parse(sessionData)
+            });
+        }
+    });
+
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            const sessionData = localStorage.getItem('sessionData');
+            if (sessionData) {
+                sendMessageToIframe({
+                    type: 'restoreSession',
+                    sessionData: JSON.parse(sessionData)
+                });
+            }
+        }
+    });
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/rodama-rewards/service-worker.js').then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+    }
+    </script>
+</body>
+</html>
