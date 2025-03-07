@@ -46,56 +46,121 @@
 <body>
     <iframe id="framerContent" src="https://rodamaapp.framer.website" allowfullscreen allow="geolocation; camera; microphone; storage-access"></iframe>
     <script>
-    function sendMessageToIframe(message) {
+    // Mejor gestión de sesiones para PWA
+    (function() {
+        const SESSION_KEY = 'rodama_session_data';
         const iframe = document.getElementById('framerContent');
-        iframe.contentWindow.postMessage(message, 'https://rodamaapp.framer.website');
-    }
-    
-    window.addEventListener('message', function(event) {
-        if (event.origin !== "https://rodamaapp.framer.website") return;
+        const targetOrigin = 'https://rodamaapp.framer.website';
         
-        if (event.data.type === 'setSessionData') {
-            localStorage.setItem('sessionData', JSON.stringify(event.data.sessionData));
-        } else if (event.data.type === 'getSessionData') {
-            const sessionData = localStorage.getItem('sessionData');
-            sendMessageToIframe({
-                type: 'sessionDataResponse',
-                sessionData: sessionData ? JSON.parse(sessionData) : null
-            });
-        }
-    }, false);
-
-    window.addEventListener('load', function() {
-        const sessionData = localStorage.getItem('sessionData');
-        if (sessionData) {
-            sendMessageToIframe({
-                type: 'restoreSession',
-                sessionData: JSON.parse(sessionData)
-            });
-        }
-    });
-
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            const sessionData = localStorage.getItem('sessionData');
-            if (sessionData) {
-                sendMessageToIframe({
-                    type: 'restoreSession',
-                    sessionData: JSON.parse(sessionData)
-                });
+        // Función para enviar mensaje al iframe
+        function sendMessageToIframe(message) {
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage(message, targetOrigin);
             }
         }
-    });
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/rodama-rewards/service-worker.js').then(function(registration) {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            }, function(err) {
-                console.log('ServiceWorker registration failed: ', err);
-            });
+        
+        // Escuchar mensajes del iframe
+        window.addEventListener('message', function(event) {
+            if (event.origin !== targetOrigin) return;
+            
+            try {
+                // Manejar los diferentes tipos de mensajes
+                if (event.data && event.data.type) {
+                    switch(event.data.type) {
+                        case 'setSessionData':
+                            // Guardar datos de sesión
+                            if (event.data.sessionData) {
+                                localStorage.setItem(SESSION_KEY, JSON.stringify(event.data.sessionData));
+                                console.log('PWA: Session data stored');
+                                
+                                // También almacenar en sessionStorage para respaldo
+                                sessionStorage.setItem(SESSION_KEY, JSON.stringify(event.data.sessionData));
+                            } else {
+                                // Si es null, limpiar la sesión (logout)
+                                localStorage.removeItem(SESSION_KEY);
+                                sessionStorage.removeItem(SESSION_KEY);
+                                console.log('PWA: Session data cleared');
+                            }
+                            break;
+                            
+                        case 'getSessionData':
+                            // Enviar datos de sesión almacenados
+                            const sessionData = localStorage.getItem(SESSION_KEY);
+                            sendMessageToIframe({
+                                type: 'sessionDataResponse',
+                                sessionData: sessionData ? JSON.parse(sessionData) : null
+                            });
+                            console.log('PWA: Session data sent to iframe');
+                            break;
+                    }
+                }
+            } catch (error) {
+                console.error('PWA: Error processing message:', error);
+            }
         });
-    }
+        
+        // Intentar restaurar la sesión cuando la página se carga
+        function restoreSession() {
+            try {
+                const sessionData = localStorage.getItem(SESSION_KEY);
+                if (sessionData) {
+                    console.log('PWA: Attempting to restore session');
+                    // Esperar a que el iframe esté cargado
+                    setTimeout(() => {
+                        sendMessageToIframe({
+                            type: 'restoreSession',
+                            sessionData: JSON.parse(sessionData)
+                        });
+                    }, 2000); // Dar tiempo para que el iframe se cargue completamente
+                }
+            } catch (error) {
+                console.error('PWA: Error restoring session:', error);
+            }
+        }
+        
+        // Restaurar sesión cuando la app se reactiva
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                console.log('PWA: App becoming visible, checking session');
+                restoreSession();
+            }
+        });
+        
+        // Manejo de errores en el iframe
+        iframe.onerror = function() {
+            console.error('PWA: Error loading iframe');
+        };
+        
+        // Detectar cuando el iframe está completamente cargado
+        iframe.onload = function() {
+            console.log('PWA: iframe loaded');
+            restoreSession();
+        };
+        
+        // Manejar errores de red para mantener la experiencia offline
+        window.addEventListener('online', function() {
+            console.log('PWA: Back online');
+            // Podríamos recargar el iframe o notificar al usuario
+        });
+        
+        window.addEventListener('offline', function() {
+            console.log('PWA: Offline mode');
+            // Manejar modo offline si es necesario
+        });
+        
+        // Registrar el service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/rodama-rewards/service-worker.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(function(err) {
+                        console.error('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    })();
     </script>
 </body>
 </html>
