@@ -5,11 +5,11 @@ const SESSION_CACHE_NAME = 'rodama-session-cache-v1';
 
 // Recursos estáticos a cachear
 const urlsToCache = [
-    '/rodama-rewards/',
-    '/rodama-rewards/index.html',
-    '/rodama-rewards/manifest.json',
-    '/rodama-rewards/icon-192x192.png',
-    '/rodama-rewards/icon-512x512.png'
+    '/',
+    '/index.html',
+    '/manifest.json',
+    '/icon-192x192.png',
+    '/icon-512x512.png'
 ];
 
 // Lista de URLs que no deben ser cacheadas
