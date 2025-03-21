@@ -1,3 +1,6 @@
+// Importar el SDK de OneSignal para Service Worker
+importScripts('https://cdn.onesignal.com/sdks/OneSignalSDKWorker.js');
+
 const CACHE_NAME = 'rodama-rewards-pwa-cache-v3';
 const STATIC_CACHE_NAME = 'rodama-static-cache-v3';
 const DYNAMIC_CACHE_NAME = 'rodama-dynamic-cache-v3';
@@ -18,7 +21,9 @@ const noCacheUrls = [
     'supabase.in',
     'api.supabase.co',
     'auth/v1',
-    'rest/v1'
+    'rest/v1',
+    'onesignal.com', // Añadir OneSignal a la lista de no cacheo
+    'cdn.onesignal.com'
 ];
 
 // Función para verificar si una URL debe ser excluida del caché
@@ -87,6 +92,11 @@ self.addEventListener('fetch', (event) => {
         return;
     }
     
+    // No interceptar peticiones de OneSignal
+    if (request.url.includes('OneSignal') || request.url.includes('onesignal.com')) {
+        return;
+    }
+    
     // No cachear peticiones a Supabase Auth o API
     if (shouldExcludeFromCache(request.url)) {
         console.log('[ServiceWorker] Omitiendo caché para:', request.url);
@@ -131,7 +141,7 @@ self.addEventListener('fetch', (event) => {
                         // Si estamos offline y no hay caché, podríamos devolver una página offline
                         if (request.mode === 'navigate') {
                             // Para navegación, intenta devolver la página principal cacheada
-                            return caches.match('/rodama-rewards/');
+                            return caches.match('/');
                         }
                         return null;
                     });
@@ -147,6 +157,31 @@ self.addEventListener('sync', (event) => {
         console.log('[ServiceWorker] Sincronizando autenticación en segundo plano');
         // Aquí podríamos implementar lógica para renovar tokens o verificar sesiones
     }
+});
+
+// Evento de notificación (para manejar clics en notificaciones)
+self.addEventListener('notificationclick', function(event) {
+    console.log('[Service Worker] Notificación clickeada');
+    
+    // Puedes personalizar la acción al hacer clic en la notificación
+    event.notification.close();
+    
+    // Esto abrirá la ventana del cliente si está cerrada y enfoca si está abierta
+    event.waitUntil(
+        clients.matchAll({type: 'window'}).then(clientsArr => {
+            // Si existe una ventana abierta, enfócala
+            const hadWindowToFocus = clientsArr.some(windowClient => {
+                if (windowClient.url === '/' || windowClient.url === '/index.html') {
+                    return windowClient.focus();
+                }
+            });
+            
+            // Si no hay ventana para enfocar, abrir una nueva
+            if (!hadWindowToFocus) {
+                clients.openWindow('/').then(windowClient => windowClient && windowClient.focus());
+            }
+        })
+    );
 });
 
 // Manejo de mensajes desde el cliente
