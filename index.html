@@ -42,6 +42,20 @@
             }
         }
     </style>
+    <!-- OneSignal SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "a18ba484-72a8-4fe3-b51c-7eecfcf51199",
+      safari_web_id: "web.onesignal.auto.2b30b273-8f48-4327-8bae-bed77c33071b",
+      notifyButton: {
+        enable: true,
+      },
+    });
+  });
+</script>
 </head>
 <body>
     <iframe id="framerContent" src="https://rodamaapp.framer.website" allowfullscreen allow="geolocation; camera; microphone; storage-access"></iframe>
