@@ -42,36 +42,52 @@
             }
         }
     </style>
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" async></script>
+<!-- Colocar esto justo después de la etiqueta <head> en index.html -->
 <script>
+  // Define window.OneSignal como un objeto global antes de cargar el script
+  window.OneSignal = window.OneSignal || {};
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(function() {
-    window.OneSignal = window.OneSignal || {};
-    OneSignal.init({
-      appId: "a18ba484-72a8-4fe3-b51c-7eecfcf51199",
-      safari_web_id: "web.onesignal.auto.xxx", // ID de Safari
-      notifyButton: { enable: false },
-      allowLocalhostAsSecureOrigin: true,
-      serviceWorkerParam: { scope: "/" },
-      serviceWorkerPath: "/OneSignalSDKWorker.js",
-      // Esta configuración es clave para PWAs
-      promptOptions: {
-        slidedown: {
-          prompts: [
-            {
-              type: "push",
-              autoPrompt: false,
-              text: {
-                actionMessage: "¿Quieres recibir notificaciones de actualizaciones importantes?",
-                acceptButton: "Permitir",
-                cancelButton: "No gracias"
-              }
-            }
-          ]
-        }
-      }
+</script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  // Función para confirmar que OneSignal está disponible globalmente
+  function ensureOneSignalIsGlobal() {
+    if (!window.OneSignal) {
+      console.log("Asegurando que OneSignal sea global");
+      window.OneSignal = window.OneSignal || {};
+    }
+    
+    // Inicializamos OneSignal una vez cargado el script
+    window.OneSignalDeferred.push(function() {
+      console.log("Inicializando OneSignal desde global script");
+      window.OneSignal.init({
+        appId: "a18ba484-72a8-4fe3-b51c-7eecfcf51199",
+        notifyButton: { enable: false },
+        allowLocalhostAsSecureOrigin: true,
+        // Configuración para PWA
+        serviceWorkerParam: { scope: "/" },
+        serviceWorkerPath: "/OneSignalSDKWorker.js",
+      });
+      
+      // Establecer bandera para indicar que OneSignal está inicializado
+      window.oneSignalInitialized = true;
+      
+      // Crear un evento personalizado que puedes escuchar en tu aplicación
+      const event = new CustomEvent('onesignalInitialized');
+      window.dispatchEvent(event);
+      
+      console.log("OneSignal inicializado correctamente");
     });
-  });
+  }
+  
+  // Ejecutar inmediatamente
+  ensureOneSignalIsGlobal();
+  
+  // También ejecutar cuando el DOM esté listo para asegurar que se hace
+  document.addEventListener('DOMContentLoaded', ensureOneSignalIsGlobal);
+  
+  // Y nuevamente después de un tiempo para manejar casos donde la carga sea lenta
+  setTimeout(ensureOneSignalIsGlobal, 2000);
 </script>
 </head>
 <body>
