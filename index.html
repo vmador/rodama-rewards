@@ -42,7 +42,6 @@
             }
         }
     </style>
-<!-- Añade esto antes del cierre de </head> en tu index.html -->
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -50,9 +49,9 @@
     OneSignal.init({
       appId: "a18ba484-72a8-4fe3-b51c-7eecfcf51199",
       notifyButton: {
-        enable: false, // Deshabilitamos el botón predeterminado
+        enable: false,
       },
-      allowLocalhostAsSecureOrigin: true, // Importante para desarrollo local
+      allowLocalhostAsSecureOrigin: true, // Solo para desarrollo local
     });
     console.log("OneSignal inicializado correctamente");
   });
