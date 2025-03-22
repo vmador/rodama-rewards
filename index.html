@@ -42,18 +42,35 @@
             }
         }
     </style>
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" async></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(function(OneSignal) {
+  OneSignalDeferred.push(function() {
+    window.OneSignal = window.OneSignal || {};
     OneSignal.init({
       appId: "a18ba484-72a8-4fe3-b51c-7eecfcf51199",
-      notifyButton: {
-        enable: false,
-      },
-      allowLocalhostAsSecureOrigin: true, // Solo para desarrollo local
+      safari_web_id: "web.onesignal.auto.xxx", // ID de Safari
+      notifyButton: { enable: false },
+      allowLocalhostAsSecureOrigin: true,
+      serviceWorkerParam: { scope: "/" },
+      serviceWorkerPath: "/OneSignalSDKWorker.js",
+      // Esta configuración es clave para PWAs
+      promptOptions: {
+        slidedown: {
+          prompts: [
+            {
+              type: "push",
+              autoPrompt: false,
+              text: {
+                actionMessage: "¿Quieres recibir notificaciones de actualizaciones importantes?",
+                acceptButton: "Permitir",
+                cancelButton: "No gracias"
+              }
+            }
+          ]
+        }
+      }
     });
-    console.log("OneSignal inicializado correctamente");
   });
 </script>
 </head>
