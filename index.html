@@ -45,14 +45,9 @@
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
+  OneSignalDeferred.push(function(OneSignal) {
+    OneSignal.init({
       appId: "a18ba484-72a8-4fe3-b51c-7eecfcf51199",
-      safari_web_id: "web.onesignal.auto.2b30b273-8f48-4327-8bae-bed77c33071b",
-      // Ocultar el botón predeterminado para usar el tuyo
-      notifyButton: {
-        enable: false, 
-      },
     });
   });
 </script>
