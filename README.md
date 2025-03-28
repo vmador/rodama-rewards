@@ -1,1 +1,1 @@
-# rodama-rewards
+# Rodama— Ordering Food & Loyalty Rewards
