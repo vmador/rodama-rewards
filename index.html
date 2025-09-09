@@ -39,77 +39,6 @@
         height: calc(100lvh - env(safe-area-inset-top));
       }
     }
-
-    /* 🔽 Estilos del banner de instalación */
-    @media (max-width: 768px) {
-      .install-banner {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        padding: 10px 14px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 92%;
-        max-width: 420px;
-        z-index: 9999;
-        font-family: system-ui, sans-serif;
-        animation: slideUp 0.4s ease-out;
-      }
-      .install-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .install-info img {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-      }
-      .app-text strong {
-        display: block;
-        font-size: 14px;
-        color: #111;
-      }
-      .app-text span {
-        font-size: 12px;
-        color: #555;
-      }
-      .actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      #installBtn {
-        background: #e63950;
-        color: #fff;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-      }
-      .close-btn {
-        background: transparent;
-        border: none;
-        font-size: 18px;
-        cursor: pointer;
-        color: #777;
-      }
-      .close-btn:hover { color: #000; }
-      @keyframes slideUp {
-        from { opacity: 0; transform: translate(-50%, 30px); }
-        to   { opacity: 1; transform: translate(-50%, 0); }
-      }
-    }
-    @media (min-width: 769px) {
-      .install-banner { display: none !important; }
-    }
   </style>
 
   <!-- OneSignal -->
@@ -121,11 +50,9 @@
   <script>
     function ensureOneSignalIsGlobal() {
       if (!window.OneSignal) {
-        console.log("Asegurando que OneSignal sea global");
         window.OneSignal = window.OneSignal || {};
       }
       window.OneSignalDeferred.push(function() {
-        console.log("Inicializando OneSignal desde global script");
         window.OneSignal.init({
           appId: "a18ba484-72a8-4fe3-b51c-7eecfcf51199",
           notifyButton: { enable: false },
@@ -136,7 +63,6 @@
         window.oneSignalInitialized = true;
         const event = new CustomEvent('onesignalInitialized');
         window.dispatchEvent(event);
-        console.log("OneSignal inicializado correctamente");
       });
     }
     ensureOneSignalIsGlobal();
@@ -145,60 +71,27 @@
   </script>
 </head>
 <body>
-  <iframe id="framerContent" src="https://rodamaapp.framer.website" allowfullscreen allow="geolocation; camera; microphone; storage-access"></iframe>
-
-  <!-- 🔽 Banner de instalación -->
-  <div id="installBanner" class="install-banner" style="display:none;">
-    <div class="install-info">
-      <img src="https://framerusercontent.com/images/kPlal8MnRxnK7qFBwjXr9mJTrD8.png?width=193&height=193" alt="Rodama" />
-      <div class="app-text">
-        <strong>Rodama</strong>
-        <span>Ordena, Paga, Recibe</span>
-      </div>
-    </div>
-    <div class="actions">
-      <button id="installBtn">Instalar</button>
-      <button id="closeBanner" class="close-btn">✕</button>
-    </div>
-  </div>
+  <!-- 🔑 Cambié aquí tu iframe -->
+  <iframe 
+    id="framerContent" 
+    src="https://rodamaapp.framer.website" 
+    allowfullscreen 
+    allow="geolocation; camera; microphone; storage-access; popups"
+    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+  </iframe>
 
   <script>
-    // Banner install PWA
-    let deferredPrompt;
-    const installBanner = document.getElementById("installBanner");
-    const installBtn = document.getElementById("installBtn");
-    const closeBtn = document.getElementById("closeBanner");
-
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      installBanner.style.display = "flex";
-    });
-
-    installBtn.addEventListener("click", async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        installBanner.style.display = "none";
-      }
-      deferredPrompt = null;
-    });
-
-    closeBtn.addEventListener("click", () => {
-      installBanner.style.display = "none";
-    });
-
-    // Service Worker
     (function() {
       const SESSION_KEY = 'rodama_session_data';
       const iframe = document.getElementById('framerContent');
       const targetOrigin = 'https://rodamaapp.framer.website';
+
       function sendMessageToIframe(message) {
         if (iframe && iframe.contentWindow) {
           iframe.contentWindow.postMessage(message, targetOrigin);
         }
       }
+
       window.addEventListener('message', function(event) {
         if (event.origin !== targetOrigin) return;
         try {
@@ -220,12 +113,18 @@
                   sessionData: sessionData ? JSON.parse(sessionData) : null
                 });
                 break;
+              case 'openPopup': // 👈 Nuevo: abrir popups desde el iframe
+                if (event.data.url) {
+                  window.open(event.data.url, "_blank", "width=600,height=700");
+                }
+                break;
             }
           }
         } catch (error) {
           console.error('PWA: Error processing message:', error);
         }
       });
+
       function restoreSession() {
         try {
           const sessionData = localStorage.getItem(SESSION_KEY);
@@ -241,12 +140,15 @@
           console.error('PWA: Error restoring session:', error);
         }
       }
+
       document.addEventListener('visibilitychange', function() {
         if (!document.hidden) {
           restoreSession();
         }
       });
+
       iframe.onload = function() { restoreSession(); };
+
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
           navigator.serviceWorker.register('/service-worker.js')
