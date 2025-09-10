@@ -63,6 +63,7 @@
         window.oneSignalInitialized = true;
         const event = new CustomEvent('onesignalInitialized');
         window.dispatchEvent(event);
+        console.log('OneSignal inicializado correctamente');
       });
     }
     ensureOneSignalIsGlobal();
@@ -71,7 +72,6 @@
   </script>
 </head>
 <body>
-  <!-- 🔑 Cambié aquí tu iframe -->
   <iframe 
     id="framerContent" 
     src="https://rodamaapp.framer.website" 
@@ -92,6 +92,53 @@
         }
       }
 
+      // Funciones proxy para OneSignal
+      window.OneSignalProxy = {
+        async isPushEnabled() {
+          if (window.OneSignal) {
+            try {
+              return await window.OneSignal.isPushNotificationsEnabled();
+            } catch (error) {
+              console.error('Error checking OneSignal push status:', error);
+              return false;
+            }
+          }
+          return false;
+        },
+        
+        async showNativePrompt(userId) {
+          if (window.OneSignal) {
+            try {
+              await window.OneSignal.showNativePrompt();
+              // Esperar un poco para que el usuario responda al prompt
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              const isEnabled = await window.OneSignal.isPushNotificationsEnabled();
+              if (isEnabled && userId) {
+                await window.OneSignal.setExternalUserId(userId);
+              }
+              return isEnabled;
+            } catch (error) {
+              console.error('Error showing OneSignal prompt:', error);
+              return false;
+            }
+          }
+          return false;
+        },
+        
+        async setExternalUserId(userId) {
+          if (window.OneSignal && userId) {
+            try {
+              await window.OneSignal.setExternalUserId(userId);
+              return true;
+            } catch (error) {
+              console.error('Error setting OneSignal external user ID:', error);
+              return false;
+            }
+          }
+          return false;
+        }
+      };
+
       window.addEventListener('message', function(event) {
         if (event.origin !== targetOrigin) return;
         try {
@@ -106,6 +153,7 @@
                   sessionStorage.removeItem(SESSION_KEY);
                 }
                 break;
+                
               case 'getSessionData':
                 const sessionData = localStorage.getItem(SESSION_KEY);
                 sendMessageToIframe({
@@ -113,10 +161,67 @@
                   sessionData: sessionData ? JSON.parse(sessionData) : null
                 });
                 break;
-              case 'openPopup': // 👈 Nuevo: abrir popups desde el iframe
+                
+              case 'openPopup':
                 if (event.data.url) {
                   window.open(event.data.url, "_blank", "width=600,height=700");
                 }
+                break;
+
+              // Casos para OneSignal
+              case 'oneSignalIsPushEnabled':
+                window.OneSignalProxy.isPushEnabled().then(result => {
+                  sendMessageToIframe({
+                    type: 'oneSignalIsPushEnabledResponse',
+                    requestId: event.data.requestId,
+                    result: result
+                  });
+                }).catch(error => {
+                  console.error('Error handling oneSignalIsPushEnabled:', error);
+                  sendMessageToIframe({
+                    type: 'oneSignalIsPushEnabledResponse',
+                    requestId: event.data.requestId,
+                    result: false
+                  });
+                });
+                break;
+
+              case 'oneSignalShowPrompt':
+                window.OneSignalProxy.showNativePrompt(event.data.userId).then(result => {
+                  sendMessageToIframe({
+                    type: 'oneSignalShowPromptResponse',
+                    requestId: event.data.requestId,
+                    result: result
+                  });
+                }).catch(error => {
+                  console.error('Error handling oneSignalShowPrompt:', error);
+                  sendMessageToIframe({
+                    type: 'oneSignalShowPromptResponse',
+                    requestId: event.data.requestId,
+                    result: false
+                  });
+                });
+                break;
+
+              case 'oneSignalSetUserId':
+                window.OneSignalProxy.setExternalUserId(event.data.userId).then(result => {
+                  sendMessageToIframe({
+                    type: 'oneSignalSetUserIdResponse',
+                    requestId: event.data.requestId,
+                    result: result
+                  });
+                }).catch(error => {
+                  console.error('Error handling oneSignalSetUserId:', error);
+                  sendMessageToIframe({
+                    type: 'oneSignalSetUserIdResponse',
+                    requestId: event.data.requestId,
+                    result: false
+                  });
+                });
+                break;
+
+              default:
+                // Mensaje no reconocido
                 break;
             }
           }
@@ -147,7 +252,10 @@
         }
       });
 
-      iframe.onload = function() { restoreSession(); };
+      iframe.onload = function() { 
+        console.log('Iframe loaded');
+        restoreSession(); 
+      };
 
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
@@ -160,6 +268,11 @@
             });
         });
       }
+
+      // Log de depuración
+      console.log('PWA Script initialized');
+      console.log('OneSignal available:', !!window.OneSignalDeferred);
+      
     })();
   </script>
 </body>
