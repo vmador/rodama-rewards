@@ -1,5 +1,5 @@
 // Quitar código complejo para minimizar conflictos
-importScripts('https://cdn.onesignal.com/sdks/OneSignalSDKWorker.js');
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDKWorker.js');
 
 // Agregar event listener para evitar errores de mensajes
 self.addEventListener('message', function(event) {
