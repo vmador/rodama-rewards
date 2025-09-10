@@ -136,17 +136,39 @@
           serviceWorkerPath: "/OneSignalSDKWorker.js",
         });
         
-        // Esperar un poco para que OneSignal se inicialice completamente
-        setTimeout(() => {
-          window.oneSignalInitialized = true;
-          
-          // Crear OneSignalProxy DESPUÉS de que OneSignal se inicialice
-          createOneSignalProxy();
-          
-          const event = new CustomEvent('onesignalInitialized');
-          window.dispatchEvent(event);
-          console.log('OneSignal inicializado correctamente');
-        }, 1000);
+        // Intentar crear OneSignalProxy inmediatamente y luego en intervalos
+        const tryCreateProxy = () => {
+          if (window.OneSignal && window.OneSignal.isPushNotificationsEnabled) {
+            console.log('OneSignal está listo, creando proxy...');
+            window.oneSignalInitialized = true;
+            createOneSignalProxy();
+            
+            const event = new CustomEvent('onesignalInitialized');
+            window.dispatchEvent(event);
+            console.log('OneSignal inicializado correctamente');
+            return true;
+          }
+          return false;
+        };
+        
+        // Intentar inmediatamente
+        if (!tryCreateProxy()) {
+          // Si no funciona, intentar cada 500ms hasta 10 veces
+          let attempts = 0;
+          const interval = setInterval(() => {
+            attempts++;
+            console.log(`Intento ${attempts} de crear OneSignalProxy...`);
+            
+            if (tryCreateProxy() || attempts >= 10) {
+              clearInterval(interval);
+              if (attempts >= 10) {
+                console.error('No se pudo crear OneSignalProxy después de 10 intentos');
+                // Crear proxy básico como fallback
+                createOneSignalProxy();
+              }
+            }
+          }, 500);
+        }
       });
     }
     
