@@ -45,14 +45,89 @@
   <script>
     window.OneSignal = window.OneSignal || {};
     window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalProxy = null; // Inicializar como null
   </script>
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <script>
+    // Función para crear OneSignalProxy cuando OneSignal esté listo
+    function createOneSignalProxy() {
+      console.log('Creando OneSignalProxy...');
+      
+      window.OneSignalProxy = {
+        async isPushEnabled() {
+          console.log('OneSignalProxy.isPushEnabled called');
+          if (window.OneSignal && typeof window.OneSignal.isPushNotificationsEnabled === 'function') {
+            try {
+              const result = await window.OneSignal.isPushNotificationsEnabled();
+              console.log('OneSignal.isPushNotificationsEnabled result:', result);
+              return result;
+            } catch (error) {
+              console.error('Error checking OneSignal push status:', error);
+              return false;
+            }
+          }
+          console.warn('OneSignal not ready for isPushEnabled');
+          return false;
+        },
+        
+        async showNativePrompt(userId) {
+          console.log('OneSignalProxy.showNativePrompt called with userId:', userId);
+          if (window.OneSignal && typeof window.OneSignal.showNativePrompt === 'function') {
+            try {
+              console.log('Showing OneSignal native prompt...');
+              await window.OneSignal.showNativePrompt();
+              
+              // Esperar un poco para que el usuario responda al prompt
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              const isEnabled = await window.OneSignal.isPushNotificationsEnabled();
+              console.log('Permission status after prompt:', isEnabled);
+              
+              if (isEnabled && userId) {
+                console.log('Setting external user ID:', userId);
+                await window.OneSignal.setExternalUserId(userId);
+              }
+              
+              return isEnabled;
+            } catch (error) {
+              console.error('Error showing OneSignal prompt:', error);
+              return false;
+            }
+          }
+          console.warn('OneSignal not ready for showNativePrompt');
+          return false;
+        },
+        
+        async setExternalUserId(userId) {
+          console.log('OneSignalProxy.setExternalUserId called with userId:', userId);
+          if (window.OneSignal && typeof window.OneSignal.setExternalUserId === 'function' && userId) {
+            try {
+              await window.OneSignal.setExternalUserId(userId);
+              console.log('External user ID set successfully:', userId);
+              return true;
+            } catch (error) {
+              console.error('Error setting OneSignal external user ID:', error);
+              return false;
+            }
+          }
+          console.warn('OneSignal not ready for setExternalUserId or invalid userId');
+          return false;
+        }
+      };
+      
+      console.log('OneSignalProxy created successfully:', window.OneSignalProxy);
+    }
+
     function ensureOneSignalIsGlobal() {
+      console.log('ensureOneSignalIsGlobal called');
+      
       if (!window.OneSignal) {
         window.OneSignal = window.OneSignal || {};
       }
+      
       window.OneSignalDeferred.push(function() {
+        console.log('OneSignal deferred function executing...');
+        
         window.OneSignal.init({
           appId: "a18ba484-72a8-4fe3-b51c-7eecfcf51199",
           notifyButton: { enable: false },
@@ -60,12 +135,21 @@
           serviceWorkerParam: { scope: "/" },
           serviceWorkerPath: "/OneSignalSDKWorker.js",
         });
-        window.oneSignalInitialized = true;
-        const event = new CustomEvent('onesignalInitialized');
-        window.dispatchEvent(event);
-        console.log('OneSignal inicializado correctamente');
+        
+        // Esperar un poco para que OneSignal se inicialice completamente
+        setTimeout(() => {
+          window.oneSignalInitialized = true;
+          
+          // Crear OneSignalProxy DESPUÉS de que OneSignal se inicialice
+          createOneSignalProxy();
+          
+          const event = new CustomEvent('onesignalInitialized');
+          window.dispatchEvent(event);
+          console.log('OneSignal inicializado correctamente');
+        }, 1000);
       });
     }
+    
     ensureOneSignalIsGlobal();
     document.addEventListener('DOMContentLoaded', ensureOneSignalIsGlobal);
     setTimeout(ensureOneSignalIsGlobal, 2000);
@@ -76,9 +160,9 @@
     id="framerContent" 
     src="https://rodamaapp.framer.website" 
     allowfullscreen 
-    allow="geolocation; camera; microphone; storage-access; popups"
+    allow="geolocation; camera; microphone; storage-access; notifications"
     sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups-to-escape-sandbox"
-  </iframe>
+  ></iframe>
 
   <script>
     (function() {
@@ -88,61 +172,23 @@
 
       function sendMessageToIframe(message) {
         if (iframe && iframe.contentWindow) {
+          console.log('Sending message to iframe:', message.type);
           iframe.contentWindow.postMessage(message, targetOrigin);
+        } else {
+          console.error('No se pudo enviar mensaje al iframe');
         }
       }
 
-      // Funciones proxy para OneSignal
-      window.OneSignalProxy = {
-        async isPushEnabled() {
-          if (window.OneSignal) {
-            try {
-              return await window.OneSignal.isPushNotificationsEnabled();
-            } catch (error) {
-              console.error('Error checking OneSignal push status:', error);
-              return false;
-            }
-          }
-          return false;
-        },
-        
-        async showNativePrompt(userId) {
-          if (window.OneSignal) {
-            try {
-              await window.OneSignal.showNativePrompt();
-              // Esperar un poco para que el usuario responda al prompt
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              const isEnabled = await window.OneSignal.isPushNotificationsEnabled();
-              if (isEnabled && userId) {
-                await window.OneSignal.setExternalUserId(userId);
-              }
-              return isEnabled;
-            } catch (error) {
-              console.error('Error showing OneSignal prompt:', error);
-              return false;
-            }
-          }
-          return false;
-        },
-        
-        async setExternalUserId(userId) {
-          if (window.OneSignal && userId) {
-            try {
-              await window.OneSignal.setExternalUserId(userId);
-              return true;
-            } catch (error) {
-              console.error('Error setting OneSignal external user ID:', error);
-              return false;
-            }
-          }
-          return false;
-        }
-      };
-
       window.addEventListener('message', function(event) {
-        if (event.origin !== targetOrigin) return;
+        if (event.origin !== targetOrigin) {
+          console.log('Message from unexpected origin:', event.origin);
+          return;
+        }
+        
         try {
           if (event.data && event.data.type) {
+            console.log('Received message from iframe:', event.data.type);
+            
             switch(event.data.type) {
               case 'setSessionData':
                 if (event.data.sessionData) {
@@ -170,58 +216,91 @@
 
               // Casos para OneSignal
               case 'oneSignalIsPushEnabled':
-                window.OneSignalProxy.isPushEnabled().then(result => {
-                  sendMessageToIframe({
-                    type: 'oneSignalIsPushEnabledResponse',
-                    requestId: event.data.requestId,
-                    result: result
+                console.log('Processing oneSignalIsPushEnabled request');
+                if (window.OneSignalProxy && typeof window.OneSignalProxy.isPushEnabled === 'function') {
+                  window.OneSignalProxy.isPushEnabled().then(result => {
+                    console.log('oneSignalIsPushEnabled result:', result);
+                    sendMessageToIframe({
+                      type: 'oneSignalIsPushEnabledResponse',
+                      requestId: event.data.requestId,
+                      result: result
+                    });
+                  }).catch(error => {
+                    console.error('Error handling oneSignalIsPushEnabled:', error);
+                    sendMessageToIframe({
+                      type: 'oneSignalIsPushEnabledResponse',
+                      requestId: event.data.requestId,
+                      result: false
+                    });
                   });
-                }).catch(error => {
-                  console.error('Error handling oneSignalIsPushEnabled:', error);
+                } else {
+                  console.error('OneSignalProxy not available for isPushEnabled');
                   sendMessageToIframe({
                     type: 'oneSignalIsPushEnabledResponse',
                     requestId: event.data.requestId,
                     result: false
                   });
-                });
+                }
                 break;
 
               case 'oneSignalShowPrompt':
-                window.OneSignalProxy.showNativePrompt(event.data.userId).then(result => {
-                  sendMessageToIframe({
-                    type: 'oneSignalShowPromptResponse',
-                    requestId: event.data.requestId,
-                    result: result
+                console.log('Processing oneSignalShowPrompt request');
+                if (window.OneSignalProxy && typeof window.OneSignalProxy.showNativePrompt === 'function') {
+                  window.OneSignalProxy.showNativePrompt(event.data.userId).then(result => {
+                    console.log('oneSignalShowPrompt result:', result);
+                    sendMessageToIframe({
+                      type: 'oneSignalShowPromptResponse',
+                      requestId: event.data.requestId,
+                      result: result
+                    });
+                  }).catch(error => {
+                    console.error('Error handling oneSignalShowPrompt:', error);
+                    sendMessageToIframe({
+                      type: 'oneSignalShowPromptResponse',
+                      requestId: event.data.requestId,
+                      result: false
+                    });
                   });
-                }).catch(error => {
-                  console.error('Error handling oneSignalShowPrompt:', error);
+                } else {
+                  console.error('OneSignalProxy not available for showNativePrompt');
                   sendMessageToIframe({
                     type: 'oneSignalShowPromptResponse',
                     requestId: event.data.requestId,
                     result: false
                   });
-                });
+                }
                 break;
 
               case 'oneSignalSetUserId':
-                window.OneSignalProxy.setExternalUserId(event.data.userId).then(result => {
-                  sendMessageToIframe({
-                    type: 'oneSignalSetUserIdResponse',
-                    requestId: event.data.requestId,
-                    result: result
+                console.log('Processing oneSignalSetUserId request');
+                if (window.OneSignalProxy && typeof window.OneSignalProxy.setExternalUserId === 'function') {
+                  window.OneSignalProxy.setExternalUserId(event.data.userId).then(result => {
+                    console.log('oneSignalSetUserId result:', result);
+                    sendMessageToIframe({
+                      type: 'oneSignalSetUserIdResponse',
+                      requestId: event.data.requestId,
+                      result: result
+                    });
+                  }).catch(error => {
+                    console.error('Error handling oneSignalSetUserId:', error);
+                    sendMessageToIframe({
+                      type: 'oneSignalSetUserIdResponse',
+                      requestId: event.data.requestId,
+                      result: false
+                    });
                   });
-                }).catch(error => {
-                  console.error('Error handling oneSignalSetUserId:', error);
+                } else {
+                  console.error('OneSignalProxy not available for setExternalUserId');
                   sendMessageToIframe({
                     type: 'oneSignalSetUserIdResponse',
                     requestId: event.data.requestId,
                     result: false
                   });
-                });
+                }
                 break;
 
               default:
-                // Mensaje no reconocido
+                console.log('Unhandled message type:', event.data.type);
                 break;
             }
           }
@@ -269,9 +348,25 @@
         });
       }
 
-      // Log de depuración
+      // Log de depuración mejorado
       console.log('PWA Script initialized');
       console.log('OneSignal available:', !!window.OneSignalDeferred);
+      
+      // Verificar estado cada 3 segundos durante los primeros 15 segundos
+      let checkCount = 0;
+      const statusChecker = setInterval(() => {
+        checkCount++;
+        console.log(`[${checkCount}] OneSignal status:`, {
+          OneSignal: !!window.OneSignal,
+          OneSignalDeferred: !!window.OneSignalDeferred,
+          OneSignalProxy: !!window.OneSignalProxy,
+          oneSignalInitialized: !!window.oneSignalInitialized
+        });
+        
+        if (checkCount >= 5) {
+          clearInterval(statusChecker);
+        }
+      }, 3000);
       
     })();
   </script>
