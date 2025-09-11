@@ -1,1 +1,27 @@
-
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OAuth Callback</title>
+</head>
+<body>
+    <script type="module">
+        // Usa el callback de Supabase directo sin importaciones externas
+        async function handleCallback() {
+            const { data, error } = await fetch('https://tphxhdydliltglucfxyx.supabase.co/auth/v1/callback' + window.location.search, {
+                method: 'POST'
+            }).then(r => r.json())
+            
+            if (data?.session) {
+                window.opener.postMessage({
+                    type: "SUPABASE_AUTH_SUCCESS", 
+                    session: data.session
+                }, "*")
+                window.close()
+            }
+        }
+        
+        handleCallback()
+    </script>
+</body>
+</html>
