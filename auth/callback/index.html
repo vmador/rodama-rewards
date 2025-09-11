@@ -5,23 +5,20 @@
     <title>OAuth Callback</title>
 </head>
 <body>
-    <script type="module">
-        // Usa el callback de Supabase directo sin importaciones externas
-        async function handleCallback() {
-            const { data, error } = await fetch('https://tphxhdydliltglucfxyx.supabase.co/auth/v1/callback' + window.location.search, {
-                method: 'POST'
-            }).then(r => r.json())
-            
-            if (data?.session) {
-                window.opener.postMessage({
-                    type: "SUPABASE_AUTH_SUCCESS", 
-                    session: data.session
-                }, "*")
-                window.close()
-            }
-        }
+    <p>Procesando autenticación...</p>
+    <script>
+        const url = new URL(window.location.href)
+        const code = url.searchParams.get('code')
         
-        handleCallback()
+        if (code && window.opener) {
+            window.opener.postMessage({
+                type: "OAUTH_CODE_RECEIVED",
+                code: code
+            }, "*")
+            window.close()
+        } else {
+            document.body.innerHTML = '<p>Error: No se recibió el código de autorización</p>'
+        }
     </script>
 </body>
 </html>
